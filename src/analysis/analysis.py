@@ -41,8 +41,8 @@ References
 
 import numpy as np
 from typing import Tuple, List, Optional
-from .integrator import SimulationResult
-from .equations import equations_of_motion, G_UNITS
+from ..core.integrator import SimulationResult
+from ..core.equations import equations_of_motion, G_UNITS
 
 
 def energy_conservation_error(result: SimulationResult) -> np.ndarray:
@@ -193,8 +193,8 @@ def estimate_lyapunov_exponent(
     lyapunov : np.ndarray
         Running estimate of λ_L at each step [1/yr]
     """
-    from .integrator import integrate_rk4
-    from .initial_conditions import build_state_vector
+    from ..core.integrator import integrate_rk4
+    from ..core.initial_conditions import build_state_vector
 
     masses = np.array([ic['m1'], ic['m2'], ic['m3']])
     y0 = build_state_vector(ic)
