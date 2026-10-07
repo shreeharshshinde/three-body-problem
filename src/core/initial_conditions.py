@@ -56,10 +56,18 @@ def figure_eight() -> Dict[str, Any]:
     x2 = -0.97000436; y2 =  0.24308753
     x3 =  0.0;        y3 =  0.0
 
-    # Velocities (specific to the choreography constraint)
-    vx3 = -0.93240737 * 2; vy3 = -0.86473146 * 2
-    vx1 = -vx3 / 2;        vy1 = -vy3 / 2
-    vx2 = -vx3 / 2;        vy2 = -vy3 / 2
+    # Velocities from Chenciner & Montgomery (2000), scaled to G = 4π² units.
+    #
+    # The published values (0.93240737, 0.86473146) are in G=1 natural units.
+    # Our simulation uses G = 4π² AU³/(M☉·yr²).  Since velocity scales as
+    # v ∝ √G, we must multiply by √(4π²/1) = 2π to convert to our unit system.
+    #
+    # Choreography constraint: v1 = v2, v3 = -2*v1 (equal masses, CM frame)
+    _vx = 0.93240737 * 2 * np.pi   # x-component of v3 (negated) in G=4π² units
+    _vy = 0.86473146 * 2 * np.pi   # y-component of v3 (negated) in G=4π² units
+    vx3 = -_vx; vy3 = -_vy
+    vx1 =  _vx / 2; vy1 =  _vy / 2
+    vx2 =  _vx / 2; vy2 =  _vy / 2
 
     return {
         'r1': np.array([x1, y1]),
@@ -75,7 +83,7 @@ def figure_eight() -> Dict[str, Any]:
             'Discovered by Moore (1993), proven by Chenciner & Montgomery (2000). '
             'A periodic choreography solution — all bodies follow the same path.'
         ),
-        't_period': 6.3259 / (2 * np.pi),
+        't_period': 6.3259 / (2 * np.pi),   # T in G=4π² units = T_paper / (2π)
         't_end': 20.0,
         'reference': 'Chenciner & Montgomery (2000), Ann. Math. 152, 881',
     }
