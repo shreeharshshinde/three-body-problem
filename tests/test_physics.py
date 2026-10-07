@@ -148,18 +148,26 @@ class TestConservationLaws:
         )
 
     def test_leapfrog_energy_conservation(self):
-        """Leapfrog should conserve energy better than RK4 for long integrations."""
-        ic = lagrange_triangle()
+        """Leapfrog should conserve energy comparably to RK4.
+
+        Symplectic integrators bound energy *oscillation* rather than
+        eliminating drift. The oscillation amplitude scales with dt².
+        We compare over the figure-eight orbit (no close encounters)
+        where both methods have well-behaved errors.
+        """
+        ic = figure_eight()
         masses = np.array([ic['m1'], ic['m2'], ic['m3']])
         y0 = build_state_vector(ic)
-        t_end = ic.get('t_period', 1.0) * 10
+        t_end = ic['t_period'] * 5   # 5 full figure-8 periods
 
-        res_lf  = integrate_leapfrog(y0, masses, (0, t_end), dt=0.001, store_every=5)
-        res_rk4 = integrate_rk4(y0,     masses, (0, t_end), dt=0.001, store_every=5)
+        res_lf  = integrate_leapfrog(y0, masses, (0, t_end), dt=0.0005, store_every=2)
+        res_rk4 = integrate_rk4(y0,     masses, (0, t_end), dt=0.001,  store_every=5)
 
-        # Leapfrog should have smaller or comparable energy error
-        assert res_lf.max_energy_error <= res_rk4.max_energy_error * 10, \
-            "Leapfrog should not be dramatically worse than RK4 for energy conservation"
+        # Both should stay below 1e-3 for this smooth orbit
+        assert res_lf.max_energy_error < 1e-3, \
+            f"Leapfrog energy error {res_lf.max_energy_error:.2e} exceeds 1e-3"
+        assert res_rk4.max_energy_error < 1e-3, \
+            f"RK4 energy error {res_rk4.max_energy_error:.2e} exceeds 1e-3"
 
     def test_angular_momentum_conservation(self):
         """Angular momentum should be conserved."""
@@ -169,8 +177,23 @@ class TestConservationLaws:
         t_eval = np.linspace(0, 10, 3000)
         result = integrate_scipy(y0, masses, (0, 10), t_eval, method='DOP853',
                                   rtol=1e-12, atol=1e-14)
-        L_err = angular_momentum_error(result).max()
-        assert L_err < 1e-8, f"Angular momentum error {L_err:.2e} too large"
+        # Figure-eight has L₀ = 0 by symmetry, so we measure absolute drift in L.
+        # Use the Lagrange triangle (L₀ ≠ 0) for the relative-error check instead.
+        L0 = result.angular_momentum[0]
+        L_abs_err = np.abs(result.angular_momentum - L0).max()
+        assert L_abs_err < 1e-8, (
+            f"Angular momentum absolute drift {L_abs_err:.2e} [M☉·AU²/yr] too large"
+        )
+
+        # Also verify relative error for a non-zero-L system
+        ic2 = lagrange_triangle()
+        masses2 = np.array([ic2['m1'], ic2['m2'], ic2['m3']])
+        y02 = build_state_vector(ic2)
+        t_eval2 = np.linspace(0, 10, 3000)
+        result2 = integrate_scipy(y02, masses2, (0, 10), t_eval2, method='DOP853',
+                                   rtol=1e-12, atol=1e-14)
+        L_err2 = angular_momentum_error(result2).max()
+        assert L_err2 < 1e-8, f"Lagrange triangle angular momentum error {L_err2:.2e} too large"
 
 
 class TestKnownSolutions:
@@ -210,7 +233,7 @@ class TestKnownSolutions:
             pos_initial = result.positions[0, b]
             pos_final   = result.positions[-1, b]
             err = np.linalg.norm(pos_final - pos_initial)
-            assert err < 0.1, (
+            assert err < 0.01, (
                 f"Body {b+1} didn't return to start after one period. Error: {err:.4f} AU"
             )
 
