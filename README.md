@@ -175,7 +175,7 @@ The maximal Lyapunov exponent is computed via the standard renormalization algor
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/three-body-problem.git
+git clone https://github.com/shreeharshshinde/three-body-problem.git
 cd three-body-problem
 
 # Create environment
@@ -189,7 +189,7 @@ pip install -e .
 ### Option B: pip
 
 ```bash
-git clone https://github.com/yourusername/three-body-problem.git
+git clone https://github.com/shreeharshshinde/three-body-problem.git
 cd three-body-problem
 
 python -m venv .venv
@@ -665,7 +665,7 @@ The **identical scipy call signature** — method, tolerances, events — carrie
 ```
 MIT License
 
-Copyright (c) 2026 [Your Name]
+Copyright (c) 2026 Shreeharsh Shinde
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

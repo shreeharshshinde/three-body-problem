@@ -6,10 +6,10 @@ setup(
     description='A research-grade Python package for simulating the gravitational three-body problem',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    author='Shreeharsh',
+    author='Shreeharsh Shinde',
     author_email='shreeharsh157@gmail.com',
     license='MIT',
-    url='https://github.com/shreeharsh157/three-body-problem',
+    url='https://github.com/shreeharshshinde/three-body-problem',
     packages=find_packages(),
     install_requires=[
         'numpy>=1.24',
