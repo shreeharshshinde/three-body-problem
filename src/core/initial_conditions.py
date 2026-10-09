@@ -14,15 +14,15 @@ Each function returns a dictionary with:
 
 Catalogue
 ---------
-1. figure_eight       — Chenciner & Montgomery (2000), equal masses
-2. lagrange_triangle  — Lagrange (1772), equilateral triangle
-3. euler_collinear    — Euler (1767), collinear configuration
-4. broucke_henon      — Broucke (1975), stable family
-5. hierarchical       — Sun + Jupiter + Saturn (real solar system)
-6. pythagorean        — Burrau (1913), masses 3-4-5, chaotic
-7. figure_eight_perturbed — Figure-8 with perturbation (shows chaos)
-8. sun_earth_moon     — Scaled Sun-Earth-Moon system
-9. random_stable      — Random configuration with zero total momentum
+1. figure_eight           — Chenciner & Montgomery (2000), equal masses
+2. lagrange_triangle      — Lagrange (1772), equilateral triangle
+3. pythagorean            — Burrau (1913), masses 3-4-5, chaotic
+4. solar_system           — Sun + Jupiter + Saturn (real solar system)
+5. figure_eight_perturbed — Figure-8 with perturbation (shows chaos)
+6. sun_earth_moon         — Scaled Sun-Earth-Moon system
+
+Note: euler_collinear and broucke_henon are planned for Phase 3.
+See PROJECT_ROADMAP.md tasks 3.1 and 3.5.
 
 References
 ----------
