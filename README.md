@@ -25,11 +25,12 @@
 8. [Integrators](#8-integrators)
 9. [Analysis Tools](#9-analysis-tools)
 10. [Notebooks Guide](#10-notebooks-guide)
-11. [CLI Reference](#11-cli-reference)
-12. [Running Tests](#12-running-tests)
-13. [Connection to Black Hole Research](#13-connection-to-black-hole-research)
-14. [References](#14-references)
-15. [License](#15-license)
+11. [Interactive Visualizers](#11-interactive-visualizers)
+12. [CLI Reference](#12-cli-reference)
+13. [Running Tests](#13-running-tests)
+14. [Connection to Black Hole Research](#14-connection-to-black-hole-research)
+15. [References](#15-references)
+16. [License](#16-license)
 
 ---
 
@@ -46,7 +47,8 @@ This package simulates the gravitational three-body problem — the motion of th
 | 🌀 **6 configurations** | Figure-8, Lagrange, Pythagorean, Solar System, and more |
 | 📊 **Analysis tools** | Lyapunov exponent, conservation law monitoring, ejection detection |
 | 🎬 **Visualization** | Trajectories, phase space, animations, energy plots |
-| 📓 **5 Notebooks** | Progressive tutorials from basics to research connection |
+| 🌐 **Interactive HTML** | Standalone Three.js browser simulator (no install required) |
+| 📓 **6 Notebooks** | Progressive tutorials from basics to 3D visualization |
 | ✅ **Test suite** | Physics-validated unit tests with pytest |
 
 ### Why This Project Was Built
@@ -244,7 +246,15 @@ three-body-problem/
 │   ├── 02_famous_orbits.ipynb      ← All 6 configurations with analysis
 │   ├── 03_chaos_and_lyapunov.ipynb ← Lyapunov exponent, chaos vs periodic
 │   ├── 04_conservation_laws.ipynb  ← Energy, momentum, symplectic integrators
-│   └── 05_research_connection.ipynb← Bridge to Kerr geodesics and BH research
+│   ├── 05_research_connection.ipynb← Bridge to Kerr geodesics and BH research
+│   └── 06_3d_visualization.ipynb   ← 3D trajectory plots via REBOUND + matplotlib
+│
+├── 📁 simulation/                  ← Standalone browser simulator
+│   └── index.html                  ← Self-contained Three.js interactive app (no install)
+│
+├── 📁 frontend/                    ← Vite + Three.js dev setup (in progress)
+│   ├── package.json                ← npm dependencies (vite, three)
+│   └── node_modules/               ← npm packages (gitignored)
 │
 ├── 📁 scripts/                     ← Command-line tools
 │   └── run_simulation.py           ← CLI entry point
@@ -465,6 +475,7 @@ Work through the notebooks in order. Each builds on the previous.
 | `03_chaos_and_lyapunov.ipynb` | Chaos quantification | Lyapunov exponent, Benettin algorithm | 45 min |
 | `04_conservation_laws.ipynb` | Conservation laws | Energy, angular momentum, virial theorem, symplectic | 30 min |
 | `05_research_connection.ipynb` | GR bridge | Kerr geodesics, photon rings, γ vs λ_L | 40 min |
+| `06_3d_visualization.ipynb` | 3D visualization | REBOUND IAS15, matplotlib 3D, trajectory plots | 30 min |
 
 ### Launch Notebooks
 
@@ -476,7 +487,44 @@ jupyter lab
 
 ---
 
-## 11. CLI Reference
+## 11. Interactive Visualizers
+
+The project includes two browser-based interactive simulators that run entirely in JavaScript — no Python install needed.
+
+### simulation/index.html — Standalone App (recommended)
+
+A self-contained, single-file Three.js simulator. Open it directly in any browser:
+
+```bash
+# Option 1: open directly in browser
+xdg-open simulation/index.html    # Linux
+open simulation/index.html        # macOS
+
+# Option 2: serve locally (avoids CORS issues in some browsers)
+python -m http.server 8080
+# then visit http://localhost:8080/simulation/index.html
+```
+
+Features:
+- Real-time gravitational simulation running in JavaScript
+- Interactive 3D camera (drag to rotate, scroll to zoom)
+- Preset configurations: Figure-Eight, Lagrange Triangle, Pythagorean, Solar System
+- Adjustable playback speed, trail length, and mass sliders
+- No installation — one file, works offline
+
+### frontend/ — Vite + Three.js Dev Setup (in progress)
+
+```bash
+cd frontend
+npm install   # already done — node_modules present
+npm run dev   # starts Vite dev server at http://localhost:5173
+```
+
+This is a modular Vite build setup intended as the next iteration of the interactive visualizer (Phase 5 of the roadmap). It has the dev dependencies installed (`vite`, `three`) but source files are not yet written. The `simulation/index.html` is the current working version.
+
+---
+
+## 12. CLI Reference
 
 ### Run a simulation
 
@@ -529,7 +577,7 @@ python scripts/run_simulation.py --list
 
 ---
 
-## 12. Running Tests
+## 13. Running Tests
 
 ```bash
 conda activate three-body
@@ -568,7 +616,7 @@ tests/test_physics.py::TestKnownSolutions::test_figure_eight_returns_to_start PA
 
 ---
 
-## 13. Connection to Black Hole Research
+## 14. Connection to Black Hole Research
 
 This project was built specifically to develop intuition for Kerr black hole ray tracing. The connections are direct and mathematical.
 
@@ -624,7 +672,7 @@ The **identical scipy call signature** — method, tolerances, events — carrie
 
 ---
 
-## 14. References
+## 15. References
 
 ### Foundational Papers
 
@@ -660,7 +708,7 @@ The **identical scipy call signature** — method, tolerances, events — carrie
 
 ---
 
-## 15. License
+## 16. License
 
 ```
 MIT License
