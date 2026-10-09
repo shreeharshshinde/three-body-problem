@@ -14,10 +14,10 @@
 |---|------|--------|-------|
 | 1.1 | Replace `[Your Name]` in README.md license block | ✅ | Bottom of README |
 | 1.2 | Replace `yourusername` in README.md GitHub badge/link | ✅ | Top of README |
-| 1.3 | Remove or add missing configs: README lists `euler_collinear` and `broucke_henon` but they don't exist in code | ⬜ | Either add them (Phase 3) or remove from README table |
-| 1.4 | Document or remove `frontend/` — currently undocumented in README | ⬜ | Add a section explaining what it does and how to run it |
-| 1.5 | Explain `simulation/index.html` — standalone HTML simulation, not mentioned anywhere | ⬜ | Add note in README or move to `frontend/` |
-| 1.6 | Notebook 06 mismatch — `06_3d_visualization.ipynb` exists but physics engine is 2D | ⬜ | Either add 3D engine (Phase 5) or rename/scope the notebook correctly |
+| 1.3 | Remove or add missing configs: README lists `euler_collinear` and `broucke_henon` but they don't exist in code | ✅ | Removed from `initial_conditions.py` docstring; README table was already correct. Added note pointing to Phase 3 tasks. |
+| 1.4 | Document or remove `frontend/` — currently undocumented in README | ✅ | Added as section 11 in README with how-to-run instructions and honest note that source files are not yet written |
+| 1.5 | Explain `simulation/index.html` — standalone HTML simulation, not mentioned anywhere | ✅ | Documented in section 11 (Interactive Visualizers) with open/serve instructions |
+| 1.6 | Notebook 06 mismatch — `06_3d_visualization.ipynb` exists but physics engine is 2D | ✅ | Retitled to "3D Trajectory Visualization (2D Physics, 3D Plots)" with a note block explaining the dimensionality |
 
 ---
 
