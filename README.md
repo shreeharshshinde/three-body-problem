@@ -59,6 +59,14 @@ This project serves two purposes:
 
 2. **Research bridge**: The **Lyapunov exponent** computed here for chaotic three-body orbits is mathematically identical to the **orbital Lyapunov exponent γ** of the photon sphere in Kerr spacetime — the quantity that controls photon ring widths in the EHT M87* image.
 
+<div align="center">
+
+![Figure-Eight Choreography](docs/figures/figure_eight_trajectory.png)
+
+*Figure-Eight Choreography — three equal-mass bodies tracing the same closed curve. Energy error ΔE/E₀ < 1e-8 over 20 yr (DOP853 integrator).*
+
+</div>
+
 ---
 
 ## 2. Scientific Background
@@ -92,6 +100,14 @@ The three-body problem is **chaotic**: small perturbations in initial conditions
 - `λ_L ≈ 0`: regular/periodic orbit (trajectories stay bounded)
 
 This makes long-term prediction of chaotic three-body systems fundamentally impossible — not due to computational limits, but due to the physics of exponential error amplification.
+
+<div align="center">
+
+![Lyapunov Exponent — Pythagorean Problem](docs/figures/pythagorean_lyapunov.png)
+
+*Maximal Lyapunov exponent for the Pythagorean Problem. λ_L converges to **0.274 yr⁻¹** — the same mathematical quantity controls photon ring widths near Kerr black holes (Gralla & Lupsasca 2020).*
+
+</div>
 
 ---
 
@@ -342,6 +358,14 @@ list_configurations()
 | `solar_system` | Sun-Jupiter-Saturn | Hierarchical | Yes (long-term) | Real solar system |
 | `figure_eight_perturbed` | Perturbed Figure-Eight | Chaotic | No | — |
 | `sun_earth_moon` | Sun-Earth-Moon | Hierarchical | Yes | Newton (1687) |
+
+<div align="center">
+
+![Pythagorean Problem — Ejection](docs/figures/pythagorean_trajectory.png)
+
+*Pythagorean Problem (Burrau 1913) — masses 3, 4, 5 starting from rest. The lightest body (Body 1) is ejected after a chaotic interaction, escaping to > 200 AU.*
+
+</div>
 
 ### Creating Custom Initial Conditions
 
