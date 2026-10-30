@@ -38,10 +38,10 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 3.1 | Add `euler_collinear` initial condition | ⬜ | Euler (1767) collinear solution — one of the three known exact families. Referenced in docs but missing from code. |
-| 3.2 | Fix `angular_momentum_error()` division by zero | ⬜ | When L₀≈0 (figure-eight), function returns ~10¹⁹. Guard: if `|L₀| < 1e-10`, return absolute error. File: `src/analysis/analysis.py` |
-| 3.3 | Fix Leapfrog docstring — "no drift" claim is misleading | ⬜ | Correct claim: *bounded oscillation*, not zero drift. Close encounters cause transient spikes. File: `src/core/integrator.py` |
-| 3.4 | Fix `sun_earth_moon` Moon velocity inconsistency | ⬜ | Formula uses `3e-6` for Earth mass but config value is `3.003e-6`. File: `src/core/initial_conditions.py` |
+| 3.1 | Add `euler_collinear` initial condition | ✅ | Euler (1767) collinear solution — equal masses at −1, 0, +1 AU. ω = π√5, T ≈ 0.894 yr. Force-balanced: outer bodies orbit, central body stationary. Added to CATALOGUE. |
+| 3.2 | Fix `angular_momentum_error()` division by zero | ✅ | When \|L₀\| < 1e-10 (figure-eight), returns absolute error instead of relative. Max error for figure-8: 2.85e-9 (was ~10¹⁹). File: `src/analysis/analysis.py` |
+| 3.3 | Fix Leapfrog docstring — "no drift" claim is misleading | ✅ | Corrected: "energy stays *bounded* (oscillates)" not "no drift". Added caveat about close-encounter transient spikes. File: `src/core/integrator.py` |
+| 3.4 | Fix `sun_earth_moon` Moon velocity inconsistency | ✅ | Formula now uses `3.003e-6` consistently (was `3e-6`). File: `src/core/initial_conditions.py` |
 | 3.5 | Add `broucke_henon` initial condition (optional) | ⬜ | Broucke (1975) stable family. Low priority — only if time permits. |
 
 ---
