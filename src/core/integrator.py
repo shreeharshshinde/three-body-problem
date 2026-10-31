@@ -7,7 +7,7 @@ Available Integrators
 ---------------------
 1. RK45   — Runge-Kutta 4(5), adaptive step, scipy (default)
 2. DOP853 — Dormand-Prince 8(5,3), high-accuracy adaptive, scipy
-3. Leapfrog — Symplectic integrator, fixed step, energy-conserving
+3. Leapfrog — Symplectic integrator, fixed step, bounded energy oscillation
 4. RK4    — Classic 4th-order Runge-Kutta, fixed step
 
 Integrator Choice Guide
@@ -16,12 +16,15 @@ Integrator Choice Guide
 |------------|--------------------|----|----------------------|
 | RK45       | Good (adaptive)    | Fast  | General exploration  |
 | DOP853     | Excellent          | Medium| Long integrations    |
-| Leapfrog   | Excellent (symplectic)| Fast| Periodic orbits      |
+| Leapfrog   | Bounded oscillation (symplectic) | Fast  | Periodic orbits      |
 | RK4        | Good (fixed step)  | Fast  | Teaching/debugging   |
 
 For research-grade simulations of periodic orbits (figure-8, Lagrange),
 use the Leapfrog (Störmer-Verlet) integrator — it exactly conserves a
-modified Hamiltonian, preventing secular energy drift over long times.
+modified Hamiltonian H̃ = H + O(dt²), so energy error stays bounded
+(oscillates around a fixed value) rather than drifting secularly.
+Note: close encounters can cause transient energy spikes even with Leapfrog,
+because the fixed timestep may undersample the sharp force peak.
 
 References
 ----------
@@ -171,8 +174,13 @@ def integrate_leapfrog(
         v(t+dt)    = v(t) + 0.5*(a(t) + a(t+dt))*dt
 
     This is a symplectic integrator — it exactly conserves a modified
-    Hamiltonian H̃ = H + O(dt²), preventing secular energy drift.
+    Hamiltonian H̃ = H + O(dt²), so energy error stays *bounded* (oscillates
+    around a small fixed value) rather than drifting secularly like RK4.
     Critical for long-duration periodic orbit simulations.
+
+    Caveat: close encounters can cause transient energy spikes because the
+    fixed timestep dt may undersample the sharp gravitational force peak.
+    For encounter-heavy runs (e.g. Pythagorean), use DOP853 instead.
 
     Parameters
     ----------
