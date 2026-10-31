@@ -20,9 +20,10 @@ Catalogue
 4. solar_system           — Sun + Jupiter + Saturn (real solar system)
 5. figure_eight_perturbed — Figure-8 with perturbation (shows chaos)
 6. sun_earth_moon         — Scaled Sun-Earth-Moon system
+7. euler_collinear        — Euler (1767), collinear rotating solution
 
-Note: euler_collinear and broucke_henon are planned for Phase 3.
-See PROJECT_ROADMAP.md tasks 3.1 and 3.5.
+Note: broucke_henon is planned for Phase 3 task 3.5 (optional).
+See PROJECT_ROADMAP.md.
 
 References
 ----------
@@ -31,6 +32,7 @@ References
 - Šuvakov & Dmitrašinović (2013), Phys. Rev. Lett. 110, 114301
 - Lagrange (1772), Prix de l'Académie Royale
 - Burrau (1913), Vierteljahrsschr. Astron. Ges. 48, 195
+- Euler (1767), Nov. Comm. Acad. Sci. Petrop. 11, 144
 """
 
 import numpy as np
@@ -273,7 +275,7 @@ def sun_earth_moon() -> Dict[str, Any]:
 
     # Moon: 384,400 km ≈ 0.00257 AU from Earth
     a_M_relative = 0.00257  # AU
-    v_M_relative = 2 * np.pi / np.sqrt(a_M_relative) * np.sqrt(3e-6)  # Earth mass = 3e-6 M_sun
+    v_M_relative = 2 * np.pi / np.sqrt(a_M_relative) * np.sqrt(3.003e-6)  # Earth mass = 3.003e-6 M_sun
 
     return {
         'r1': np.array([0.0, 0.0]),
@@ -294,6 +296,76 @@ def sun_earth_moon() -> Dict[str, Any]:
         't_period': 1.0,  # Earth year
         't_end': 5.0,
         'reference': 'Newton (1687), Principia Mathematica, Book III',
+    }
+
+
+def euler_collinear() -> Dict[str, Any]:
+    """
+    Euler's collinear solution (1767).
+
+    One of only three known exact solution families to the three-body
+    problem (alongside Lagrange's equilateral triangle and the figure-8
+    choreography). Discovered by Euler (1767), 5 years before Lagrange.
+
+    Configuration (equal masses m = 1 M_sun):
+        Three bodies on the x-axis at positions -a, 0, +a with a = 1 AU.
+        The outer two bodies (bodies 1 and 3) orbit the stationary central
+        body (body 2), which sits exactly at the center of mass.
+
+    Physics:
+        Net force on body 2 is zero by symmetry — equal pulls from both sides.
+        Outer bodies feel gravity from both neighbors; the angular velocity
+        for a stable rotating collinear solution satisfies:
+
+            ω² = G·M_total / r_outer³ · (5/4)
+
+        where r_outer = a is the outer body distance from the CM.
+
+        With G = 4π², m = 1, a = 1:
+            ω = π√5  [rad/yr]
+            T = 2π/ω = 2/√5 ≈ 0.894 yr
+
+    Note:
+        Unlike the Lagrange triangle, the collinear Euler solution is
+        *always unstable* — any perturbation grows exponentially. It is an
+        exact, periodic, but Lyapunov-unstable solution.
+
+    Reference: Euler (1767), Nov. Comm. Acad. Sci. Petrop. 11, 144
+    """
+    G = 4 * np.pi**2
+    m = 1.0
+    a = 1.0  # outer body distance from CM [AU]
+
+    # Angular velocity from force balance (equal masses, symmetric collinear)
+    # ω² · a = G·m·5/(4·a²)  →  ω² = 5·G·m / (4·a³)
+    omega = np.sqrt(5 * G * m / (4 * a**3))
+    T = 2 * np.pi / omega
+
+    # Positions: body 1 at -a, body 2 at origin (CM), body 3 at +a
+    r1 = np.array([-a, 0.0])
+    r2 = np.array([ 0.0, 0.0])
+    r3 = np.array([ a,  0.0])
+
+    # Velocities: bodies 1 & 3 undergo circular rotation about the CM;
+    # body 2 is at the CM and stays stationary (net force = 0 by symmetry).
+    # For CCW rotation: v = ω × r  →  v = (-ω·y, ω·x)
+    v1 = np.array([ 0.0, -omega * a])   # body 1 at (-a,0): v = (0, -ω)
+    v2 = np.array([ 0.0,  0.0      ])   # body 2 at origin: stationary
+    v3 = np.array([ 0.0,  omega * a])   # body 3 at (+a,0): v = (0, +ω)
+
+    return {
+        'r1': r1, 'r2': r2, 'r3': r3,
+        'v1': v1, 'v2': v2, 'v3': v3,
+        'm1': m, 'm2': m, 'm3': m,
+        'name': 'Euler Collinear Solution',
+        'description': (
+            'Euler (1767): three equal-mass bodies on a line, outer two orbit '
+            'the central stationary body. One of three known exact solution '
+            'families. Always unstable — any perturbation grows exponentially.'
+        ),
+        't_period': T,
+        't_end': 5 * T,
+        'reference': 'Euler (1767), Nov. Comm. Acad. Sci. Petrop. 11, 144',
     }
 
 
@@ -348,6 +420,7 @@ CATALOGUE = {
     'solar_system':         hierarchical_solar_system,
     'figure_eight_perturbed': figure_eight_perturbed,
     'sun_earth_moon':       sun_earth_moon,
+    'euler_collinear':      euler_collinear,
 }
 
 
