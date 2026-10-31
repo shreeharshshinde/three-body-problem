@@ -65,15 +65,37 @@ def energy_conservation_error(result: SimulationResult) -> np.ndarray:
 
 def angular_momentum_error(result: SimulationResult) -> np.ndarray:
     """
-    Relative angular momentum conservation error.
+    Angular momentum conservation error.
 
-    ΔL/L₀ = |L(t) - L(0)| / |L(0)|
+    For systems with non-zero initial angular momentum:
+        ΔL/L₀ = |L(t) - L(0)| / |L(0)|   (relative error)
+
+    For systems where L₀ ≈ 0 (e.g. figure-eight choreography, which has
+    exactly zero total angular momentum by symmetry), the relative error
+    diverges numerically. In that case we fall back to the absolute error:
+        ΔL = |L(t) - L(0)|
 
     Angular momentum is exactly conserved in closed gravitational
     systems. Any drift indicates numerical error.
+
+    Parameters
+    ----------
+    result : SimulationResult
+
+    Returns
+    -------
+    error : np.ndarray, shape (N,)
+        Relative angular momentum error (or absolute if L₀ ≈ 0) [M_sun AU²/yr]
     """
     L0 = result.angular_momentum[0]
-    return np.abs((result.angular_momentum - L0) / (np.abs(L0) + 1e-30))
+    abs_error = np.abs(result.angular_momentum - L0)
+
+    if np.abs(L0) < 1e-10:
+        # L₀ ≈ 0 (e.g. figure-eight): relative error is undefined.
+        # Return absolute error instead to avoid ~10¹⁹ spurious values.
+        return abs_error
+
+    return abs_error / np.abs(L0)
 
 
 def separation_matrix(result: SimulationResult) -> np.ndarray:
