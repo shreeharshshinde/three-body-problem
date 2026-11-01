@@ -52,10 +52,10 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | **Experiment: Lyapunov vs perturbation size** | ⬜ | Compute λ_L for `figure_eight_perturbed` across δ = [1e-4, 1e-3, 1e-2, 0.1] AU. Does λ_L depend on δ or converge to same value? 3-sentence conclusion. Add to notebook 03. |
-| 4.2 | **Experiment: Integrator accuracy comparison** | ⬜ | Plot energy error vs time for all 4 integrators on same axes for figure-eight orbit. DOP853 flat, RK4 drifting, Leapfrog oscillating. Written interpretation. New section in notebook 04. |
-| 4.3 | **Experiment: Chaos onset in Pythagorean** | ⬜ | Plot body separations over time. Mark ejection event. Show Lyapunov converges *before* ejection. Conclusion: chaos precedes ejection. Add to notebook 02. |
-| 4.4 | **Notebook 05: quantitative bridge** | ⬜ | Add numerical comparison: your computed λ_L (Pythagorean) vs Schwarzschild photon sphere γ=π. Discuss why they differ in magnitude. This is the research payoff. |
+| 4.1 | **Experiment: Lyapunov vs perturbation size** | ✅ | 4 perturbation sizes δ∈{1e-4…0.1} AU for figure_eight_perturbed. λ_L converges to same value regardless of δ — chaos is a property of the orbit, not the perturbation. 3-sentence conclusion added. Notebook 03, section 5. |
+| 4.2 | **Experiment: Integrator accuracy comparison** | ✅ | All 4 integrators on figure-eight, 20 yr. DOP853 flat, RK45 flat (noisier), Leapfrog bounded oscillation, RK4 secular drift. Written interpretation added. Notebook 04, section 5. |
+| 4.3 | **Experiment: Chaos onset in Pythagorean** | ✅ | Body separations + Lyapunov timeline on same figure. λ_L converges ~30 yr before ejection event. Conclusion: chaos precedes and drives ejection. Notebook 02, section 3b. |
+| 4.4 | **Notebook 05: quantitative bridge** | ✅ | λ_L (Pythagorean) vs γ=π (Schwarzschild) comparison table. Shows both are O(1) in dimensionless units — scale difference entirely due to T_orbit (years vs milliseconds). Notebook 05, section 5b. |
 
 ---
 
