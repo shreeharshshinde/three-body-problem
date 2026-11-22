@@ -67,16 +67,19 @@ def angular_momentum_error(result: SimulationResult) -> np.ndarray:
     """
     Angular momentum conservation error.
 
+    ``result.angular_momentum`` stores the scalar magnitude |L(t)| for both
+    2D and 3D simulations. The error is therefore always a scalar per timestep.
+
     For systems with non-zero initial angular momentum:
-        ΔL/L₀ = |L(t) - L(0)| / |L(0)|   (relative error)
+        ΔL/L₀ = ||L(t)| - |L(0)|| / |L(0)|   (relative error)
 
-    For systems where L₀ ≈ 0 (e.g. figure-eight choreography, which has
+    For systems where |L₀| ≈ 0 (e.g. the figure-eight choreography, which has
     exactly zero total angular momentum by symmetry), the relative error
-    diverges numerically. In that case we fall back to the absolute error:
-        ΔL = |L(t) - L(0)|
+    diverges numerically. In that case the absolute error is returned:
+        ΔL = ||L(t)| - |L(0)||
 
-    Angular momentum is exactly conserved in closed gravitational
-    systems. Any drift indicates numerical error.
+    Angular momentum is exactly conserved in closed gravitational systems.
+    Any drift indicates numerical error.
 
     Parameters
     ----------
@@ -85,7 +88,7 @@ def angular_momentum_error(result: SimulationResult) -> np.ndarray:
     Returns
     -------
     error : np.ndarray, shape (N,)
-        Relative angular momentum error (or absolute if L₀ ≈ 0) [M_sun AU²/yr]
+        Relative (or absolute when L₀ ≈ 0) angular momentum error [M_sun AU²/yr]
     """
     L0 = result.angular_momentum[0]
     abs_error = np.abs(result.angular_momentum - L0)
@@ -187,6 +190,9 @@ def estimate_lyapunov_exponent(
        b. Rescale: reset ỹ = y + ε * (ỹ - y) / |ỹ - y|
     4. The Lyapunov exponent: λ_L = lim_{N→∞} (1/N) Σ_k Λ_k
 
+    Works for both 2D (12-component state vector) and 3D (18-component).
+    Dimensionality is inferred from the initial condition dict.
+
     Connection to your BH research:
     The Lyapunov exponent γ of the photon sphere is defined identically —
     it measures how fast nearby photon orbits diverge in phase space.
@@ -220,10 +226,11 @@ def estimate_lyapunov_exponent(
 
     masses = np.array([ic['m1'], ic['m2'], ic['m3']])
     y0 = build_state_vector(ic)
+    n_state = len(y0)   # 12 for 2D, 18 for 3D
 
-    # Random perturbation in phase space
+    # Random perturbation in phase space — size matches state vector
     rng = np.random.default_rng(0)
-    delta = rng.standard_normal(12)
+    delta = rng.standard_normal(n_state)
     delta /= np.linalg.norm(delta)
     y0_pert = y0 + epsilon * delta
 
@@ -241,8 +248,16 @@ def estimate_lyapunov_exponent(
         res_ref  = integrate_rk4(y_ref,  masses, (t_current, t_current + tau), dt=dt, store_every=1, G=G)
         res_pert = integrate_rk4(y_pert, masses, (t_current, t_current + tau), dt=dt, store_every=1, G=G)
 
-        y_ref  = np.concatenate([res_ref.positions[-1].flatten(),  res_ref.velocities[-1].flatten()])
-        y_pert = np.concatenate([res_pert.positions[-1].flatten(), res_pert.velocities[-1].flatten()])
+        # Reconstruct flat state vectors from final step
+        # positions shape: (N, 3, d), velocities shape: (N, 3, d)
+        y_ref  = np.concatenate([
+            res_ref.positions[-1].flatten(),
+            res_ref.velocities[-1].flatten(),
+        ])
+        y_pert = np.concatenate([
+            res_pert.positions[-1].flatten(),
+            res_pert.velocities[-1].flatten(),
+        ])
 
         # Separation in phase space
         delta_new = y_pert - y_ref
@@ -257,7 +272,7 @@ def estimate_lyapunov_exponent(
 
         t_current += tau
         times.append(t_current)
-        lyapunov_running.append(lyapunov_sum / (t_current))
+        lyapunov_running.append(lyapunov_sum / t_current)
 
     return np.array(times), np.array(lyapunov_running)
 
