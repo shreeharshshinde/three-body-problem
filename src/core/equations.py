@@ -19,12 +19,15 @@ For three bodies (i = 1, 2, 3), the full system is:
     d²r_2/dt² = G*m_1*(r_1-r_2)/|r_1-r_2|^3 + G*m_3*(r_3-r_2)/|r_3-r_2|^3
     d²r_3/dt² = G*m_1*(r_1-r_3)/|r_1-r_3|^3 + G*m_2*(r_2-r_3)/|r_2-r_3|^3
 
-This gives 18 coupled ODEs in 3D (or 12 in 2D):
-  - 6 position components (x,y per body in 2D)
-  - 6 velocity components (vx,vy per body in 2D)
+This gives 12 coupled ODEs in 2D (or 18 in 3D):
+  - 6 (or 9) position components
+  - 6 (or 9) velocity components
 
-State vector (2D):
+State vector (2D, n=12):
     y = [x1,y1, x2,y2, x3,y3, vx1,vy1, vx2,vy2, vx3,vy3]
+
+State vector (3D, n=18):
+    y = [x1,y1,z1, x2,y2,z2, x3,y3,z3, vx1,vy1,vz1, vx2,vy2,vz2, vx3,vy3,vz3]
 
 References
 ----------
@@ -81,6 +84,7 @@ def acceleration(
     The softened force law replaces |r|^3 with (|r|^2 + ε^2)^(3/2),
     preventing numerical blow-up at close encounters while preserving
     long-range behavior. This is standard in N-body simulations.
+    Works for both 2D and 3D position vectors — np.dot is dimension-agnostic.
     """
     r12 = r2 - r1
     r13 = r3 - r1
@@ -101,7 +105,10 @@ def equations_of_motion(t: float, y: np.ndarray, masses: np.ndarray, G: float = 
     """
     Full system of ODEs for scipy.integrate.solve_ivp.
 
-    State vector layout (2D):
+    Supports both 2D (12-component) and 3D (18-component) state vectors.
+    Dimensionality is inferred automatically from len(y).
+
+    State vector layout (2D, n=12):
         y[0:2]   = r1 (x1, y1)
         y[2:4]   = r2 (x2, y2)
         y[4:6]   = r3 (x3, y3)
@@ -109,11 +116,19 @@ def equations_of_motion(t: float, y: np.ndarray, masses: np.ndarray, G: float = 
         y[8:10]  = v2 (vx2, vy2)
         y[10:12] = v3 (vx3, vy3)
 
+    State vector layout (3D, n=18):
+        y[0:3]   = r1 (x1, y1, z1)
+        y[3:6]   = r2 (x2, y2, z2)
+        y[6:9]   = r3 (x3, y3, z3)
+        y[9:12]  = v1 (vx1, vy1, vz1)
+        y[12:15] = v2 (vx2, vy2, vz2)
+        y[15:18] = v3 (vx3, vy3, vz3)
+
     Parameters
     ----------
     t : float
         Current time [yr] (required by solve_ivp, not used explicitly)
-    y : np.ndarray, shape (12,)
+    y : np.ndarray, shape (12,) or (18,)
         State vector
     masses : np.ndarray, shape (3,)
         [m1, m2, m3] in solar masses
@@ -122,11 +137,19 @@ def equations_of_motion(t: float, y: np.ndarray, masses: np.ndarray, G: float = 
 
     Returns
     -------
-    dydt : np.ndarray, shape (12,)
+    dydt : np.ndarray, same shape as y
         Time derivative of state vector
     """
-    r1, r2, r3 = y[0:2], y[2:4], y[4:6]
-    v1, v2, v3 = y[6:8], y[8:10], y[10:12]
+    n = len(y)
+    if n == 12:
+        d = 2
+    elif n == 18:
+        d = 3
+    else:
+        raise ValueError(f"State vector must have length 12 (2D) or 18 (3D), got {n}")
+
+    r1, r2, r3 = y[0:d], y[d:2*d], y[2*d:3*d]
+    v1, v2, v3 = y[3*d:4*d], y[4*d:5*d], y[5*d:6*d]
     m1, m2, m3 = masses
 
     a1, a2, a3 = acceleration(r1, r2, r3, m1, m2, m3, G=G)
@@ -146,8 +169,8 @@ def total_energy(
     E = (1/2)(m1|v1|² + m2|v2|² + m3|v3|²)
       - G(m1*m2/r12 + m1*m3/r13 + m2*m3/r23)
 
-    This is a conserved quantity — monitoring E drift measures
-    numerical integration accuracy.
+    Works for both 2D and 3D vectors. np.dot and np.linalg.norm are
+    dimension-agnostic.
 
     Returns
     -------
@@ -169,21 +192,51 @@ def total_angular_momentum(
     r1: np.ndarray, r2: np.ndarray, r3: np.ndarray,
     v1: np.ndarray, v2: np.ndarray, v3: np.ndarray,
     m1: float, m2: float, m3: float,
-) -> float:
+) -> np.ndarray:
     """
     Compute total angular momentum L = Σ m_i (r_i × v_i).
 
-    In 2D, the cross product gives a scalar (z-component).
+    Supports both 2D and 3D position/velocity vectors.
+
+    - 2D input: returns a 1-element array [Lz] (z-component of the cross product)
+    - 3D input: returns a 3-element array [Lx, Ly, Lz]
+
+    The return value is always a NumPy array. For callers that need a scalar,
+    use ``angular_momentum_magnitude()`` instead.
 
     Returns
     -------
-    L : float
+    L : np.ndarray, shape (1,) for 2D or shape (3,) for 3D
         Total angular momentum [M_sun * AU^2 / yr]
     """
-    def cross2d(r, v):
-        return r[0] * v[1] - r[1] * v[0]
+    dim = len(r1)
+    if dim == 2:
+        def cross(r, v):
+            return np.array([r[0] * v[1] - r[1] * v[0]])
+    else:
+        def cross(r, v):
+            return np.cross(r, v)
 
-    return m1 * cross2d(r1, v1) + m2 * cross2d(r2, v2) + m3 * cross2d(r3, v3)
+    return m1 * cross(r1, v1) + m2 * cross(r2, v2) + m3 * cross(r3, v3)
+
+
+def angular_momentum_magnitude(
+    r1: np.ndarray, r2: np.ndarray, r3: np.ndarray,
+    v1: np.ndarray, v2: np.ndarray, v3: np.ndarray,
+    m1: float, m2: float, m3: float,
+) -> float:
+    """
+    Scalar magnitude of the total angular momentum vector.
+
+    Works for both 2D and 3D. Used by the integrators to store a
+    single scalar conservation diagnostic in SimulationResult.
+
+    Returns
+    -------
+    |L| : float  [M_sun * AU^2 / yr]
+    """
+    L = total_angular_momentum(r1, r2, r3, v1, v2, v3, m1, m2, m3)
+    return float(np.linalg.norm(L))
 
 
 def center_of_mass(
@@ -194,6 +247,8 @@ def center_of_mass(
     Compute center of mass position.
 
     R_cm = (m1*r1 + m2*r2 + m3*r3) / (m1 + m2 + m3)
+
+    Works for both 2D and 3D vectors.
     """
     M = m1 + m2 + m3
     return (m1 * r1 + m2 * r2 + m3 * r3) / M
@@ -207,6 +262,7 @@ def transform_to_cm_frame(
 
     In the CM frame: Σ m_i r_i = 0, Σ m_i v_i = 0
     This eliminates linear drift of the system.
+    Works for both 2D and 3D vectors.
     """
     M = m1 + m2 + m3
     r_cm = center_of_mass(r1, r2, r3, m1, m2, m3)
