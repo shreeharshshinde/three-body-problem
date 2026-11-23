@@ -401,15 +401,127 @@ def build_state_vector(ic: Dict[str, Any]) -> np.ndarray:
     """
     Flatten an initial condition dict into the ODE state vector.
 
+    Auto-detects dimensionality from the shape of r1:
+    - 2D (shape (2,)): returns shape (12,)  → [x1,y1, x2,y2, x3,y3, vx1,vy1, vx2,vy2, vx3,vy3]
+    - 3D (shape (3,)): returns shape (18,)  → [x1,y1,z1, x2,y2,z2, x3,y3,z3, ...]
+
     Returns
     -------
-    y0 : np.ndarray, shape (12,)
-        [x1,y1, x2,y2, x3,y3, vx1,vy1, vx2,vy2, vx3,vy3]
+    y0 : np.ndarray, shape (12,) or (18,)
     """
     return np.concatenate([
         ic['r1'], ic['r2'], ic['r3'],
         ic['v1'], ic['v2'], ic['v3'],
     ])
+
+
+def figure_eight_3d(
+    inclination: float = 0.0,
+    omega_node: float = 0.0,
+) -> Dict[str, Any]:
+    """
+    Figure-8 choreography lifted into 3D phase space.
+
+    The orbit lies in a plane. By default that plane is the x–y plane
+    (inclination = 0, identical to the 2D figure-eight). Non-zero
+    inclination rotates the orbital plane around the x-axis, giving a
+    genuine 3D trajectory with non-zero Lx and Ly components.
+
+    This is the canonical 3D test case: the figure-eight is an exact
+    periodic solution, so energy and |L| conservation errors are
+    meaningful accuracy diagnostics, and the period test verifies that
+    the 3D physics engine is producing the right dynamics.
+
+    Parameters
+    ----------
+    inclination : float
+        Tilt of the orbital plane out of x–y, in radians.
+        0 → orbit in x–y plane (z = 0 for all bodies).
+        np.pi/4 → 45° tilt, etc.
+    omega_node : float
+        Longitude of ascending node [rad]. Rotates the tilted plane
+        around the z-axis. Default 0.
+
+    Returns
+    -------
+    ic : dict
+        Same keys as 2D dicts but r1/r2/r3 and v1/v2/v3 are shape (3,).
+    """
+    # Start from the 2D figure-eight
+    ic2d = figure_eight()
+
+    def _lift(r2, v2, inc, node):
+        """Lift a 2D position/velocity into 3D by rotating the orbital plane."""
+        # First embed in 3D (z=0)
+        r3 = np.array([r2[0], r2[1], 0.0])
+        v3 = np.array([v2[0], v2[1], 0.0])
+
+        # Rotation matrix: Rz(node) @ Rx(inc)
+        ci, si = np.cos(inc), np.sin(inc)
+        cn, sn = np.cos(node), np.sin(node)
+
+        # Rx(inc): rotate around x-axis by inc
+        Rx = np.array([[1, 0,   0  ],
+                       [0, ci, -si ],
+                       [0, si,  ci ]])
+        # Rz(node): rotate around z-axis by node
+        Rz = np.array([[ cn, -sn, 0],
+                       [ sn,  cn, 0],
+                       [  0,   0, 1]])
+
+        R = Rz @ Rx
+        return R @ r3, R @ v3
+
+    r1, v1 = _lift(ic2d['r1'], ic2d['v1'], inclination, omega_node)
+    r2, v2 = _lift(ic2d['r2'], ic2d['v2'], inclination, omega_node)
+    r3, v3 = _lift(ic2d['r3'], ic2d['v3'], inclination, omega_node)
+
+    ic = dict(ic2d)
+    ic.update({
+        'r1': r1, 'r2': r2, 'r3': r3,
+        'v1': v1, 'v2': v2, 'v3': v3,
+        'name': 'Figure-Eight Choreography (3D)',
+        'description': (
+            'Figure-8 choreography in 3D. The orbit lies in a tilted plane '
+            f'(inclination={np.degrees(inclination):.1f}°, '
+            f'node={np.degrees(omega_node):.1f}°). '
+            'Identical physics to the 2D figure-eight — only the viewing '
+            'orientation changes. All conservation laws hold exactly.'
+        ),
+    })
+    return ic
+
+
+def custom_3d(
+    r1, r2, r3, v1, v2, v3,
+    m1=1.0, m2=1.0, m3=1.0,
+    name="Custom 3D", description="User-defined 3D initial conditions",
+    t_end=20.0,
+) -> Dict[str, Any]:
+    """
+    Create a custom 3D initial condition dictionary.
+
+    Parameters
+    ----------
+    r1, r2, r3 : array-like, shape (3,)
+        Initial positions [AU]
+    v1, v2, v3 : array-like, shape (3,)
+        Initial velocities [AU/yr]
+    m1, m2, m3 : float
+        Masses [M_sun]
+    """
+    return {
+        'r1': np.asarray(r1, dtype=float),
+        'r2': np.asarray(r2, dtype=float),
+        'r3': np.asarray(r3, dtype=float),
+        'v1': np.asarray(v1, dtype=float),
+        'v2': np.asarray(v2, dtype=float),
+        'v3': np.asarray(v3, dtype=float),
+        'm1': float(m1), 'm2': float(m2), 'm3': float(m3),
+        'name': name, 'description': description,
+        't_period': None, 't_end': float(t_end),
+        'reference': 'User-defined (3D)',
+    }
 
 
 # Registry of all built-in configurations
@@ -421,6 +533,7 @@ CATALOGUE = {
     'figure_eight_perturbed': figure_eight_perturbed,
     'sun_earth_moon':       sun_earth_moon,
     'euler_collinear':      euler_collinear,
+    'figure_eight_3d':      figure_eight_3d,
 }
 
 
