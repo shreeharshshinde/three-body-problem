@@ -281,5 +281,107 @@ class TestIntegratorComparison:
             assert err < 1e-5, f"RK45 vs DOP853 disagree for body {b+1}: {err:.2e} AU"
 
 
+class Test3DPhysics:
+    """Tests for the 3D physics engine (Phase 5.1)."""
+
+    def test_3d_state_vector_shape(self):
+        """figure_eight_3d should produce an 18-component state vector."""
+        from src.core.initial_conditions import figure_eight_3d
+        ic = figure_eight_3d(inclination=np.pi / 6)
+        y0 = build_state_vector(ic)
+        assert y0.shape == (18,), f"Expected shape (18,), got {y0.shape}"
+
+    def test_3d_positions_shape(self):
+        """SimulationResult.positions should have shape (N, 3, 3) for 3D runs."""
+        from src.core.initial_conditions import figure_eight_3d
+        ic = figure_eight_3d()
+        masses = np.array([1.0, 1.0, 1.0])
+        y0 = build_state_vector(ic)
+        t_eval = np.linspace(0, ic['t_period'], 200)
+        result = integrate_scipy(y0, masses, (0, ic['t_period']), t_eval,
+                                 method='DOP853', rtol=1e-12, atol=1e-14)
+        assert result.positions.shape == (200, 3, 3), \
+            f"Expected (200, 3, 3), got {result.positions.shape}"
+        assert result.velocities.shape == (200, 3, 3), \
+            f"Expected (200, 3, 3), got {result.velocities.shape}"
+
+    def test_3d_energy_conservation(self):
+        """Energy must be conserved in a 3D figure-eight run."""
+        from src.core.initial_conditions import figure_eight_3d
+        ic = figure_eight_3d(inclination=np.pi / 4)
+        masses = np.array([1.0, 1.0, 1.0])
+        y0 = build_state_vector(ic)
+        t_end = ic['t_period'] * 5
+        t_eval = np.linspace(0, t_end, 3000)
+        result = integrate_scipy(y0, masses, (0, t_end), t_eval,
+                                 method='DOP853', rtol=1e-12, atol=1e-14)
+        assert result.max_energy_error < 1e-6, \
+            f"3D energy error {result.max_energy_error:.2e} exceeds 1e-6"
+
+    def test_3d_angular_momentum_conservation(self):
+        """Angular momentum magnitude must be conserved in a 3D run."""
+        from src.core.initial_conditions import figure_eight_3d
+        from src.analysis.analysis import angular_momentum_error
+        ic = figure_eight_3d(inclination=np.pi / 4)
+        masses = np.array([1.0, 1.0, 1.0])
+        y0 = build_state_vector(ic)
+        t_eval = np.linspace(0, ic['t_period'] * 5, 3000)
+        result = integrate_scipy(y0, masses, (0, ic['t_period'] * 5), t_eval,
+                                 method='DOP853', rtol=1e-12, atol=1e-14)
+        # figure-eight has |L| ≈ 0, so angular_momentum_error returns absolute error
+        L_abs_err = angular_momentum_error(result).max()
+        assert L_abs_err < 1e-6, \
+            f"3D angular momentum drift {L_abs_err:.2e} exceeds 1e-6"
+
+    def test_3d_figure_eight_returns_to_start(self):
+        """After one period, the 3D figure-eight must return to start."""
+        from src.core.initial_conditions import figure_eight_3d
+        ic = figure_eight_3d(inclination=np.pi / 6)
+        T = ic['t_period']
+        masses = np.array([1.0, 1.0, 1.0])
+        y0 = build_state_vector(ic)
+        t_eval = np.linspace(0, T, 5000)
+        result = integrate_scipy(y0, masses, (0, T), t_eval,
+                                 method='DOP853', rtol=1e-12, atol=1e-14)
+        for b in range(3):
+            err = np.linalg.norm(result.positions[-1, b] - result.positions[0, b])
+            assert err < 0.01, \
+                f"3D body {b+1} didn't return to start: error {err:.4f} AU"
+
+    def test_3d_leapfrog(self):
+        """Leapfrog must work with a 3D state vector."""
+        from src.core.initial_conditions import figure_eight_3d
+        ic = figure_eight_3d()
+        masses = np.array([1.0, 1.0, 1.0])
+        y0 = build_state_vector(ic)
+        t_end = ic['t_period'] * 3
+        result = integrate_leapfrog(y0, masses, (0, t_end), dt=0.0005, store_every=5)
+        assert result.positions.shape[2] == 3, "Leapfrog 3D: positions last dim should be 3"
+        assert result.max_energy_error < 1e-3, \
+            f"Leapfrog 3D energy error {result.max_energy_error:.2e} exceeds 1e-3"
+
+    def test_3d_flat_orbit_matches_2d(self):
+        """figure_eight_3d with inclination=0 should give the same energy as the 2D figure-eight."""
+        from src.core.initial_conditions import figure_eight_3d, figure_eight
+        masses = np.array([1.0, 1.0, 1.0])
+        t_eval = np.linspace(0, 5.0, 500)
+
+        ic2d = figure_eight()
+        y0_2d = build_state_vector(ic2d)
+        res2d = integrate_scipy(y0_2d, masses, (0, 5.0), t_eval,
+                                method='DOP853', rtol=1e-12, atol=1e-14)
+
+        ic3d = figure_eight_3d(inclination=0.0)
+        y0_3d = build_state_vector(ic3d)
+        res3d = integrate_scipy(y0_3d, masses, (0, 5.0), t_eval,
+                                method='DOP853', rtol=1e-12, atol=1e-14)
+
+        # Energies should agree to numerical precision
+        np.testing.assert_allclose(
+            res2d.energy, res3d.energy, rtol=1e-8,
+            err_msg="2D and flat-3D figure-eight energies should match",
+        )
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v', '--tb=short'])
