@@ -64,7 +64,7 @@
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 5.1 | **3D physics engine** | ⬜ | Extend `equations.py` and `integrator.py` for 3D (positions shape `(3,)` instead of `(2,)`). Makes `06_3d_visualization.ipynb` legitimate. |
+| 5.1 | **3D physics engine** | ✅ | Extended `equations.py`, `integrator.py`, `initial_conditions.py`, `analysis.py`, `visualize.py`. State vector auto-detects 2D (n=12) vs 3D (n=18). `total_angular_momentum` returns vector; `angular_momentum_magnitude` stores scalar in `SimulationResult`. `figure_eight_3d(inclination, omega_node)` added to CATALOGUE. `plot_trajectories_3d()` added using `mpl_toolkits.mplot3d`. 7 new 3D tests in `Test3DPhysics` class. All 23 tests pass. |
 | 5.2 | **Poincaré section** | ⬜ | `plot_poincare_section()` is declared in `visualize.py` but not implemented. Standard tool for visualizing chaos in Hamiltonian systems. |
 | 5.3 | **HDF5 save/load for SimulationResult** | ⬜ | h5py is in requirements.txt but unused. Add `result.save(path)` and `SimulationResult.load(path)`. Useful for long runs. |
 | 5.4 | **Notebook 05: code-level bridge to Kerr** | ⬜ | End notebook 05 with a concrete code sketch of the Kerr geodesic integrator using the same `solve_ivp` call signature. Show the parallel in code, not just prose. |
