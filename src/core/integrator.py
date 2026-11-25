@@ -19,6 +19,9 @@ Integrator Choice Guide
 | Leapfrog   | Bounded oscillation (symplectic) | Fast  | Periodic orbits      |
 | RK4        | Good (fixed step)  | Fast  | Teaching/debugging   |
 
+All integrators support both 2D (12-component) and 3D (18-component)
+state vectors. Dimensionality is inferred automatically from len(y0).
+
 For research-grade simulations of periodic orbits (figure-8, Lagrange),
 use the Leapfrog (Störmer-Verlet) integrator — it exactly conserves a
 modified Hamiltonian H̃ = H + O(dt²), so energy error stays bounded
@@ -37,7 +40,10 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from dataclasses import dataclass, field
 from typing import Optional, Callable
-from .equations import equations_of_motion, total_energy, total_angular_momentum, G_UNITS
+from .equations import (
+    equations_of_motion, total_energy,
+    total_angular_momentum, angular_momentum_magnitude, G_UNITS,
+)
 
 
 @dataclass
@@ -49,19 +55,21 @@ class SimulationResult:
     ----------
     t : np.ndarray, shape (N,)
         Time array [yr]
-    positions : np.ndarray, shape (N, 3, 2)
-        Position of each body at each timestep [AU]
-        positions[:, 0, :] = body 1 positions (x,y)
-        positions[:, 1, :] = body 2 positions (x,y)
-        positions[:, 2, :] = body 3 positions (x,y)
-    velocities : np.ndarray, shape (N, 3, 2)
+    positions : np.ndarray, shape (N, 3, 2) or (N, 3, 3)
+        Position of each body at each timestep [AU].
+        positions[:, 0, :] = body 1 positions
+        positions[:, 1, :] = body 2 positions
+        positions[:, 2, :] = body 3 positions
+        Last axis is 2 for 2D runs, 3 for 3D runs.
+    velocities : np.ndarray, shape (N, 3, 2) or (N, 3, 3)
         Velocity of each body [AU/yr]
     masses : np.ndarray, shape (3,)
         Masses [M_sun]
     energy : np.ndarray, shape (N,)
         Total energy at each timestep [M_sun AU^2/yr^2]
     angular_momentum : np.ndarray, shape (N,)
-        Total angular momentum [M_sun AU^2/yr]
+        Magnitude of total angular momentum |L| [M_sun AU^2/yr].
+        Scalar for both 2D and 3D — suitable for conservation monitoring.
     energy_error : np.ndarray, shape (N,)
         Relative energy error |(E - E0) / E0|
     integrator : str
@@ -95,10 +103,12 @@ class SimulationResult:
         return float(np.max(self.energy_error))
 
     def summary(self) -> str:
+        dim = self.positions.shape[2]
         return (
             f"Three-Body Simulation\n"
             f"{'─'*40}\n"
             f"  Integrator     : {self.integrator}\n"
+            f"  Dimensions     : {dim}D\n"
             f"  Duration       : {self.duration:.2f} yr\n"
             f"  Steps          : {self.n_steps}\n"
             f"  Max ΔE/E₀      : {self.max_energy_error:.2e}\n"
@@ -122,8 +132,8 @@ def integrate_scipy(
 
     Parameters
     ----------
-    y0 : np.ndarray, shape (12,)
-        Initial state vector [x1,y1,x2,y2,x3,y3,vx1,vy1,vx2,vy2,vx3,vy3]
+    y0 : np.ndarray, shape (12,) or (18,)
+        Initial state vector. Length 12 → 2D, length 18 → 3D.
     masses : np.ndarray, shape (3,)
         [m1, m2, m3] in solar masses
     t_span : tuple (t_start, t_end)
@@ -182,9 +192,11 @@ def integrate_leapfrog(
     fixed timestep dt may undersample the sharp gravitational force peak.
     For encounter-heavy runs (e.g. Pythagorean), use DOP853 instead.
 
+    Supports both 2D (y0 length 12) and 3D (y0 length 18) state vectors.
+
     Parameters
     ----------
-    y0 : np.ndarray, shape (12,)
+    y0 : np.ndarray, shape (12,) or (18,)
         Initial state vector
     masses : np.ndarray, shape (3,)
         Body masses [M_sun]
@@ -207,18 +219,27 @@ def integrate_leapfrog(
     n_steps = int((t_end - t_start) / dt)
     m1, m2, m3 = masses
 
+    # Detect dimensionality from state vector length
+    n = len(y0)
+    if n == 12:
+        d = 2
+    elif n == 18:
+        d = 3
+    else:
+        raise ValueError(f"State vector must have length 12 (2D) or 18 (3D), got {n}")
+
     # Unpack initial state
-    r1 = y0[0:2].copy()
-    r2 = y0[2:4].copy()
-    r3 = y0[4:6].copy()
-    v1 = y0[6:8].copy()
-    v2 = y0[8:10].copy()
-    v3 = y0[10:12].copy()
+    r1 = y0[0:d].copy()
+    r2 = y0[d:2*d].copy()
+    r3 = y0[2*d:3*d].copy()
+    v1 = y0[3*d:4*d].copy()
+    v2 = y0[4*d:5*d].copy()
+    v3 = y0[5*d:6*d].copy()
 
     # Storage
     store_n = n_steps // store_every + 1
     t_arr   = np.zeros(store_n)
-    y_arr   = np.zeros((store_n, 12))
+    y_arr   = np.zeros((store_n, n))
     t_arr[0] = t_start
     y_arr[0] = y0.copy()
     store_idx = 1
@@ -276,6 +297,7 @@ def integrate_rk4(
 
     Error: O(dt^5) per step, O(dt^4) globally.
     Not symplectic — energy drifts slowly over long integrations.
+    Supports both 2D (y0 length 12) and 3D (y0 length 18).
     Good for short-duration simulations and teaching.
     """
     t_start, t_end = t_span
@@ -283,7 +305,7 @@ def integrate_rk4(
 
     store_n = n_steps // store_every + 1
     t_arr = np.zeros(store_n)
-    y_arr = np.zeros((store_n, 12))
+    y_arr = np.zeros((store_n, len(y0)))
     t_arr[0] = t_start
     y_arr[0] = y0.copy()
     store_idx = 1
@@ -312,31 +334,45 @@ def integrate_rk4(
 
 
 def _build_result(t, y, masses, method, success, message):
-    """Build SimulationResult from raw integration output."""
+    """
+    Build SimulationResult from raw integration output.
+
+    Handles both 2D (state vector width 12) and 3D (state vector width 18).
+    angular_momentum is stored as a scalar magnitude — works for both dims.
+    """
     m1, m2, m3 = masses
     N = len(t)
 
-    positions  = np.zeros((N, 3, 2))
-    velocities = np.zeros((N, 3, 2))
+    # Detect dimensionality from state vector width
+    n = y.shape[1]
+    if n == 12:
+        d = 2
+    elif n == 18:
+        d = 3
+    else:
+        raise ValueError(f"State vector width must be 12 (2D) or 18 (3D), got {n}")
+
+    positions  = np.zeros((N, 3, d))
+    velocities = np.zeros((N, 3, d))
     energy     = np.zeros(N)
     ang_mom    = np.zeros(N)
 
     for i in range(N):
-        positions[i, 0] = y[i, 0:2]
-        positions[i, 1] = y[i, 2:4]
-        positions[i, 2] = y[i, 4:6]
-        velocities[i, 0] = y[i, 6:8]
-        velocities[i, 1] = y[i, 8:10]
-        velocities[i, 2] = y[i, 10:12]
+        positions[i, 0]  = y[i, 0:d]
+        positions[i, 1]  = y[i, d:2*d]
+        positions[i, 2]  = y[i, 2*d:3*d]
+        velocities[i, 0] = y[i, 3*d:4*d]
+        velocities[i, 1] = y[i, 4*d:5*d]
+        velocities[i, 2] = y[i, 5*d:6*d]
 
         energy[i] = total_energy(
-            positions[i,0], positions[i,1], positions[i,2],
-            velocities[i,0], velocities[i,1], velocities[i,2],
+            positions[i, 0], positions[i, 1], positions[i, 2],
+            velocities[i, 0], velocities[i, 1], velocities[i, 2],
             m1, m2, m3,
         )
-        ang_mom[i] = total_angular_momentum(
-            positions[i,0], positions[i,1], positions[i,2],
-            velocities[i,0], velocities[i,1], velocities[i,2],
+        ang_mom[i] = angular_momentum_magnitude(
+            positions[i, 0], positions[i, 1], positions[i, 2],
+            velocities[i, 0], velocities[i, 1], velocities[i, 2],
             m1, m2, m3,
         )
 

@@ -351,6 +351,105 @@ def animate_trajectories(
     return anim
 
 
+def plot_trajectories_3d(
+    result: SimulationResult,
+    title: Optional[str] = None,
+    fade: bool = True,
+    show_markers: bool = True,
+    figsize: Tuple[int, int] = (10, 8),
+    elev: float = 25.0,
+    azim: float = -60.0,
+) -> plt.Figure:
+    """
+    Plot three-body trajectories in 3D using mpl_toolkits.mplot3d.
+
+    Requires a SimulationResult produced from a 3D initial condition
+    (positions.shape = (N, 3, 3)).  For 2D results, use plot_trajectories().
+
+    Parameters
+    ----------
+    result : SimulationResult
+        Must have result.positions.shape[2] == 3.
+    title : str, optional
+        Plot title. Defaults to integrator name + "(3D)".
+    fade : bool
+        Draw the trail with increasing opacity toward the end.
+    show_markers : bool
+        Mark start (circle) and end (star) positions.
+    figsize : tuple
+    elev : float
+        Elevation angle for the 3D view [degrees].
+    azim : float
+        Azimuth angle for the 3D view [degrees].
+
+    Returns
+    -------
+    fig : matplotlib.Figure
+    """
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — registers 3D projection
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+    pos = result.positions
+    if pos.shape[2] != 3:
+        raise ValueError(
+            f"plot_trajectories_3d requires 3D positions (shape (N,3,3)), "
+            f"got shape {pos.shape}. Use plot_trajectories() for 2D results."
+        )
+
+    N = result.n_steps
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_facecolor('#0D1117')
+    fig.patch.set_facecolor('#0D1117')
+
+    for b, color in enumerate(BODY_COLORS):
+        x = pos[:, b, 0]
+        y = pos[:, b, 1]
+        z = pos[:, b, 2]
+
+        if fade and N > 1:
+            # Build a Line3DCollection with varying alpha
+            points = np.array([x, y, z]).T.reshape(-1, 1, 3)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            alphas = np.linspace(0.05, 0.9, N - 1)
+            lc = Line3DCollection(segments, colors=[
+                (*plt.matplotlib.colors.to_rgb(color), a) for a in alphas
+            ], linewidth=0.8)
+            ax.add_collection3d(lc)
+        else:
+            ax.plot(x, y, z, color=color, lw=0.8, alpha=0.7, label=BODY_LABELS[b])
+
+        if show_markers:
+            ax.scatter(x[0],  y[0],  z[0],  color=color, s=50,  zorder=5,
+                       depthshade=False, edgecolors='white', linewidths=0.5)
+            ax.scatter(x[-1], y[-1], z[-1], color=color, s=70,  zorder=5,
+                       depthshade=False, marker='*')
+
+    ax.set_xlabel('x  [AU]', labelpad=6)
+    ax.set_ylabel('y  [AU]', labelpad=6)
+    ax.set_zlabel('z  [AU]', labelpad=6)
+    ax.set_title(title or f'Three-Body Trajectories 3D ({result.integrator})')
+    ax.view_init(elev=elev, azim=azim)
+    ax.grid(True, alpha=0.2)
+
+    # Manual legend since Line3DCollection doesn't auto-label
+    for b, (color, label) in enumerate(zip(BODY_COLORS, BODY_LABELS)):
+        ax.plot([], [], [], color=color, label=label, lw=1.5)
+    ax.legend(loc='upper left', fontsize=9)
+
+    # Info text
+    fig.text(
+        0.02, 0.02,
+        f"Integrator: {result.integrator}  |  "
+        f"Duration: {result.duration:.2f} yr  |  "
+        f"Max ΔE/E₀: {result.max_energy_error:.2e}",
+        color='#8B949E', fontsize=8, family='monospace',
+    )
+
+    fig.tight_layout()
+    return fig
+
+
 def plot_all(result: SimulationResult, name: str = "simulation") -> None:
     """
     Generate and save all standard plots for a simulation result.
